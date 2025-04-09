@@ -102,7 +102,8 @@ impl<U: UnionFind> PercolationStats<U> {
 
         let time = end_time.duration_since(start_time);
         let mean = results.iter().sum::<f64>() / trials as f64;
-        let stddev = results.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (trials - 1) as f64;
+        let stddev = (results.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (trials - 1) as f64)
+            .sqrt();
         let confidence_precomputed = 1.96 * stddev / (trials as f64).sqrt();
         let confidence_low = mean - confidence_precomputed;
         let confidence_high = mean + confidence_precomputed;
