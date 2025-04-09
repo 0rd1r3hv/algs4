@@ -20,7 +20,6 @@ pub struct PercolationStats<U: UnionFind> {
     confidence_low: f64,
     confidence_high: f64,
     trials: usize,
-    results: Vec<f64>,
     time: Duration,
     _phantom: PhantomData<U>,
 }
@@ -42,10 +41,6 @@ impl<U: UnionFind> Percolation<U> {
 
     pub fn is_open(&self, row: usize, col: usize) -> bool {
         self.grid[row][col]
-    }
-
-    pub fn is_full(&mut self, row: usize, col: usize) -> bool {
-        self.uf.connected(self.index(row, col), self.top)
     }
 
     pub fn percolates(&mut self) -> bool {
@@ -119,7 +114,6 @@ impl<U: UnionFind> PercolationStats<U> {
             confidence_high,
             time,
             trials,
-            results,
             _phantom: PhantomData,
         }
     }

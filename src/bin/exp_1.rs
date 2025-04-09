@@ -1,6 +1,7 @@
 use algs4::percolation::PercolationStats;
 use algs4::union_find::{QuickUnion, WeightedQuickUnion, WeightedQuickUnionWithPathCompression};
 use clap::{Arg, Command};
+
 fn main() {
     let matches = Command::new("exp_1")
         .arg(
