@@ -3,14 +3,13 @@ use std::usize;
 use std::alloc::{GlobalAlloc, Layout};
 use std::sync::atomic::{AtomicU64, Ordering};
 
-// This global variable tracks the highest point of the stack
 thread_local!(pub static STACK_END: Cell<usize> = Cell::new(usize::MAX));
 
 #[macro_export]
 macro_rules! stack_ptr {
     () => ({
         use std::arch::asm;
-        // Grab a copy of the stack pointer
+
         let x: usize;
         unsafe {
             asm!("mov {}, rsp", out(reg) x, options(nomem, nostack));
@@ -19,26 +18,19 @@ macro_rules! stack_ptr {
     })
 }
 
-/// Saves the current position of the stack. Any function
-/// being profiled must call this macro.
 #[macro_export]
 macro_rules! tick {
     () => ({
-        // Save the current stack pointer in STACK_END
         use crate::stack_ptr;
         use crate::utils::STACK_END;
         let stack_end = stack_ptr!();
         STACK_END.with(|c| {
-            // Since the stack grows down, the "tallest"
-            // stack must have the least pointer value
             let best = std::cmp::min(c.get(), stack_end);
             c.set(best);
         });
     })
 }
 
-/// Runs the given callback, and returns its maximum stack usage
-/// as reported by the `tick!()` macro.
 pub fn measure<T, F: FnOnce() -> T>(callback: F) -> (T, usize) {
     STACK_END.with(|c| c.set(usize::MAX));
     let stack_start = stack_ptr!();

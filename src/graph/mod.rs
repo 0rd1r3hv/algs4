@@ -35,9 +35,6 @@ impl Graph {
             self.distances[v] = f64::INFINITY;
             self.visited[v] = false;
         }
-        for &dist in &self.distances {
-            assert!(!dist.is_finite());
-        }
 
         self.distances[start] = 0.0;
 
@@ -71,6 +68,7 @@ impl Graph {
         }
         f64::MAX
     }
+
 }
 
 #[cfg(test)]

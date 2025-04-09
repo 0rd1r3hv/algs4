@@ -5,8 +5,8 @@ use rand::{distr::StandardUniform, prelude::Distribution, random};
 use crate::utils::{measure, Trallocator};
 use std::alloc::System;
 
-// #[global_allocator]
-// static GLOBAL: Trallocator<System> = Trallocator::new(System);
+#[global_allocator]
+static GLOBAL: Trallocator<System> = Trallocator::new(System);
 
 pub fn generate_random_array<T>(size: usize) -> Vec<T>
 where
@@ -26,9 +26,9 @@ where
 
     let start = Instant::now();
     sort_fn(&mut array, |a, b| a.cmp(b));
-    // GLOBAL.reset();
-    // let (_, stack_usage) = measure(|| sort_fn(&mut array, |a, b| a.cmp(b)));
-    // let heap_usage = GLOBAL.get();
+    GLOBAL.reset();
+    let (_, stack_usage) = measure(|| sort_fn(&mut array, |a, b| a.cmp(b)));
+    let heap_usage = GLOBAL.get();
     let duration = start.elapsed();
 
     assert!(array.is_sorted(), "{} failed to sort correctly", name);
@@ -39,7 +39,7 @@ where
         array_size_bytes,
         duration.as_secs_f64()
     );
-    // println!("Stack usage: {} bytes", stack_usage);
-    // println!("Heap usage: {} bytes", heap_usage);
-    // println!("Total usage: {} bytes", stack_usage + heap_usage);
+    println!("Stack usage: {} bytes", stack_usage);
+    println!("Heap usage: {} bytes", heap_usage);
+    println!("Total usage: {} bytes", stack_usage + heap_usage);
 }
