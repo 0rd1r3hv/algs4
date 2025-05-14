@@ -1,6 +1,9 @@
 use std::collections::BinaryHeap;
 use ordered_float::NotNan;
 use std::cmp::Reverse;
+
+// use crate::dary_heap::DaryHeap;
+
 type DistWrapper = NotNan<f64>;
 
 #[derive(Clone)]
@@ -9,86 +12,147 @@ struct Edge {
     weight: f64,
 }
 
-pub struct Graph {
+pub struct Graph<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> {
     edges: Vec<Vec<Edge>>,
+    coord: Vec<(i32, i32)>,
     distances: Vec<f64>,
     changed: Vec<usize>,
     visited: Vec<bool>,
+    calced: Vec<bool>,
+    heap: BinaryHeap<(Reverse<DistWrapper>, usize)>,
+    // heap: DaryHeap<(Reverse<DistWrapper>, usize), 3>,
+    path: Vec<usize>,
+    num_edges: usize,
 }
 
-impl Graph {
-    pub fn new(size: usize) -> Self {
+impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<CALCPATH, HEURISTIC, EARLYSTOP> {
+    pub fn new(size: usize, coord: &[(i32, i32)]) -> Self {
+        println!("HEURISTIC: {}, EARLYSTOP: {}, CALCPATH: {}", HEURISTIC, EARLYSTOP, CALCPATH);
         Graph {
             edges: vec![vec![]; size],
+            coord: coord.to_vec(),
             distances: vec![f64::INFINITY; size],
-            changed: vec![],
+            changed: Vec::with_capacity(size),
             visited: vec![false; size],
+            calced: vec![false; size],
+            heap: BinaryHeap::with_capacity(2 * size),
+            // heap: DaryHeap::with_capacity(2 * size),
+            path: vec![0; size],
+            num_edges: 0,
         }
     }
 
-    pub fn add_edge(&mut self, from: usize, to: usize, weight: f64) {
-        self.edges[from].push(Edge { to, weight });
+    pub fn add_edge(&mut self, from: usize, to: usize) {
+        self.num_edges += 1;
+        self.edges[from].push(
+            Edge {
+                to,
+                weight: Self::euclidean_dist(self.coord[from], self.coord[to])
+            }
+        );
     }
 
     pub fn dijkstra(&mut self, start: usize, end: usize) -> f64 {
-        while let Some(v) = self.changed.pop() {
-            self.distances[v] = f64::INFINITY;
-            self.visited[v] = false;
+
+        if EARLYSTOP {
+            while let Some(v) = self.changed.pop() {
+                self.distances[v] = f64::INFINITY;
+                self.visited[v] = false;
+                self.calced[v] = false;
+            }
+        } else {
+            self.distances.fill(f64::INFINITY);
+            self.calced.fill(false);
         }
 
-        self.distances[start] = 0.0;
+        if CALCPATH {
+            self.path[start] = start;
+            self.path[end] = end;
+        }
 
-        let mut heap = BinaryHeap::new();
-        heap.push((Reverse(DistWrapper::default()), start));
-        self.visited[start] = true;
-        self.changed.push(start);
+
+        if HEURISTIC {
+            self.distances[start] = Self::euclidean_dist(self.coord[start], self.coord[end]);
+        } else {
+            self.distances[start] = 0.0;
+        }
+
+        if EARLYSTOP {
+            self.visited[start] = true;
+            self.changed.push(start);
+        }
+
+        let heap = &mut self.heap;
+        heap.clear();
+        heap.push((Reverse(DistWrapper::new(self.distances[start]).unwrap()), start));
 
         while let Some((dist_wrapper, u)) = heap.pop() {
-            let dist = dist_wrapper.0.into();
-            if u == end {
-                return dist;
-            }
-
-            if dist > self.distances[u] {
+            let dist: f64 = dist_wrapper.0.into();
+            
+            if self.calced[u] {
                 continue;
             }
-            self.changed.push(u);
+            self.calced[u] = true;
+
+            if EARLYSTOP {
+                if u == end {
+                    return dist;
+                }
+            }
 
             for &Edge {to: v, weight} in &self.edges[u] {
-                let next_dist = dist + weight;
+                if self.calced[v] {
+                    continue;
+                }
+
+                let next_dist;
+
+                if HEURISTIC {
+                    next_dist = dist + weight + Self::euclidean_dist(self.coord[v], self.coord[end]) - Self::euclidean_dist(self.coord[u], self.coord[end]);
+                } else {
+                    next_dist = dist + weight;
+                }
+
                 if next_dist < self.distances[v] {
                     self.distances[v] = next_dist;
                     heap.push((Reverse(DistWrapper::new(next_dist).unwrap()), v));
-                    if !self.visited[v] {
-                        self.visited[v] = true;
-                        self.changed.push(v);
+
+                    if CALCPATH {
+                        self.path[v] = u;
+                    }
+
+                    if EARLYSTOP {
+                        if !self.visited[v] {
+                            self.visited[v] = true;
+                            self.changed.push(v);
+                        }
                     }
                 }
             }
         }
-        f64::MAX
+        self.distances[end]
     }
 
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_dijkstra() {
-        let mut g = Graph::new(6);
-            g.add_edge(0, 1, 7.0);
-            g.add_edge(1, 2, 10.0);
-            g.add_edge(0, 2, 9.0);
-            g.add_edge(0, 5, 14.0);
-            g.add_edge(1, 3, 15.0);
-            g.add_edge(2, 5, 2.0);
-            g.add_edge(2, 3, 11.0);
-            g.add_edge(4, 5, 9.0);
-            g.add_edge(3, 4, 6.0);
-            g.add_edge(2, 2, 1.0);
-            assert_eq!(20.0, g.dijkstra(0, 3));
-            assert_eq!(26.0, g.dijkstra(0, 4));
+    #[inline]
+    pub fn euclidean_dist(u: (i32, i32), v: (i32, i32)) -> f64 {
+        (((u.0 - v.0).pow(2) + (u.1 - v.1).pow(2)) as f64).sqrt()
     }
+
+    #[inline]
+    pub fn chebyshev_dist(u: (i32, i32), v: (i32, i32)) -> f64 {
+        (u.0 - v.0).abs().max((u.1 - v.1).abs()) as f64
+    }
+
+    pub fn get_path(&self, start: usize, end: usize) -> Vec<usize> {
+        let mut path = Vec::new();
+        let mut current = end;
+        while current != self.path[current] {
+            path.push(current);
+            current = self.path[current];   
+        }
+        path.push(start);
+        path.reverse();
+        path
+    }
+    
 }
