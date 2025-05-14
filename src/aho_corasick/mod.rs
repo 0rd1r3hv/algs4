@@ -17,16 +17,20 @@ struct Node {
 
 impl AhoCorasick {
     pub fn new() -> Self {
-        let trie = vec![Node { children: [0; 128], fail: 0, flag: 0, ans: 0 }; 2];
+        let trie = vec![
+            Node { children: [1; 128], fail: 0, flag: 0, ans: 0 },
+            Node { children: [0; 128], fail: 0, flag: 0, ans: 0 },
+        ];
         AhoCorasick { 
-            trie, 
+            trie,
             num_patterns: 0,
             pattern_indices: Vec::new(),
             in_degree: Vec::new(),
         }
     }
 
-    pub fn add_pattern(&mut self, pattern: &str) -> usize {
+    pub fn add_pattern(&mut self, pattern: &str) {
+        self.num_patterns += 1;
         let mut current = 1;
         for &b in pattern.as_bytes() {
             let v = b as usize;
@@ -37,26 +41,21 @@ impl AhoCorasick {
                     flag: 0,
                     ans: 0,
                 };
+                self.trie[current].children[v] = self.trie.len();
                 self.trie.push(new_node);
-                self.trie[current].children[v] = self.trie.len() - 1;
             }
             current = self.trie[current].children[v];
         }
         if self.trie[current].flag == 0 {
-            self.trie[current].flag = self.num_patterns + 1;
+            self.trie[current].flag = self.num_patterns;
         }
         self.pattern_indices.push(self.trie[current].flag);
-        self.num_patterns += 1;
-        current
     }
 
     pub fn build(&mut self) {
         self.in_degree = vec![0; self.trie.len()];
         let mut queue = VecDeque::new();
 
-        for i in 0..128 {
-            self.trie[0].children[i] = 1;
-        }
         queue.push_back(1);
 
         while let Some(u) = queue.pop_front() {
@@ -92,7 +91,7 @@ impl AhoCorasick {
         matches
     }
 
-    pub fn get_pattern_counts(&mut self, text: &str) -> Vec<usize> {
+    pub fn get_pattern_counts<'a>(&'a mut self, text: &'a str) -> impl Iterator<Item = usize> + 'a {
         let mut counts = vec![0; self.num_patterns + 1];
         let mut current = 1;
 
@@ -110,9 +109,7 @@ impl AhoCorasick {
         }
 
         while let Some(u) = queue.pop_front() {
-            if self.trie[u].flag != 0 {
-                counts[self.trie[u].flag] = self.trie[u].ans;
-            }
+            counts[self.trie[u].flag] = self.trie[u].ans;
             let v = self.trie[u].fail;
             self.trie[v].ans += self.trie[u].ans;
             self.in_degree[v] -= 1;
@@ -121,6 +118,6 @@ impl AhoCorasick {
             }
         }
 
-        counts[1..].to_vec()
+        (0..self.num_patterns).map(move |i| counts[self.pattern_indices[i]])
     }
 }
