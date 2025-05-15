@@ -1,34 +1,5 @@
 use std::collections::VecDeque;
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Child(usize);
-
-impl Child {
-
-    #[inline]
-    pub fn new(c: u8, index: usize) -> Self {
-        Child(index << 8 | c as usize)
-    }
-
-    #[inline]
-    pub fn char(&self) -> u8 {
-        (self.0 & 0xFF) as u8
-    }
-
-    #[inline]
-    pub fn index(&self) -> usize {
-        self.0 >> 8
-    }
-
-}
-
-impl From<Child> for (u8, usize) {
-    #[inline]
-    fn from(c: Child) -> Self {
-        (c.char(), c.index())
-    }
-}
-
 pub struct AhoCorasick {
     trie: Vec<Node>,
     num_patterns: usize,
@@ -38,7 +9,7 @@ pub struct AhoCorasick {
 
 #[derive(Clone)]
 struct Node {
-    children: Vec<Child>,
+    children: [usize; 0x100],
     fail: usize,
     flag: usize,
     ans: usize,
@@ -47,7 +18,8 @@ struct Node {
 impl AhoCorasick {
     pub fn new() -> Self {
         let trie = vec![
-            Node { children: Vec::new(), fail: 0, flag: 0, ans: 0 },
+            Node { children: [1; 0x100], fail: 0, flag: 0, ans: 0 },
+            Node { children: [0; 0x100], fail: 0, flag: 0, ans: 0 },
         ];
         AhoCorasick { 
             trie,
@@ -59,25 +31,20 @@ impl AhoCorasick {
 
     pub fn add_pattern(&mut self, pattern: &str) {
         self.num_patterns += 1;
-        let mut current = 0;
+        let mut current = 1;
         for &b in pattern.as_bytes() {
-            current = if let Some(child) = self.trie[current]
-                .children
-                .iter()
-                .find(|&child| child.char() == b) {
-                child.index()
-            } else {
+            let v = b as usize;
+            if self.trie[current].children[v] == 0 {
                 let new_node = Node {
-                    children: Vec::new(),
+                    children: [0; 0x100],
                     fail: 0,
                     flag: 0,
                     ans: 0,
                 };
-                let len = self.trie.len();
+                self.trie[current].children[v] = self.trie.len();
                 self.trie.push(new_node);
-                self.trie[current].children.push(Child::new(b, len));
-                len
-            };
+            }
+            current = self.trie[current].children[v];
         }
         if self.trie[current].flag == 0 {
             self.trie[current].flag = self.num_patterns;
@@ -87,27 +54,21 @@ impl AhoCorasick {
 
     pub fn build(&mut self) {
         self.in_degree = vec![0; self.trie.len()];
-        let mut queue: VecDeque<usize> = self.trie[0].children.iter().map(|c| c.index()).collect();
-        let mut exists = [false; 0x100];
+        let mut queue = VecDeque::new();
+
+        queue.push_back(1);
 
         while let Some(u) = queue.pop_front() {
             let fail = self.trie[u].fail;
-            for i in 0..self.trie[u].children.len() {
-                let (b, v) = self.trie[u].children[i].into();
-                if let Some(c) = self.trie[fail].children.iter().find(|&c| c.char() == b) {
-                    self.trie[v].fail = c.index();
-                    exists[b as usize] = true;
+            for i in 0..0x100 {
+                let v = self.trie[u].children[i];
+                if v == 0 {
+                    self.trie[u].children[i] = self.trie[fail].children[i];
+                    continue;
                 }
+                self.trie[v].fail = self.trie[fail].children[i];
                 self.in_degree[self.trie[v].fail] += 1;
                 queue.push_back(v);
-            }
-            for i in 0..self.trie[fail].children.len() {
-                let child = self.trie[fail].children[i];
-                if !exists[child.char() as usize] {
-                    self.trie[u].children.push(child);
-                } else {
-                    exists[child.char() as usize] = false;
-                }
             }
         }
     }
@@ -118,7 +79,7 @@ impl AhoCorasick {
         
         for (i, &b) in text.as_bytes().iter().enumerate() {
             let v = b as usize;
-            current = self.trie[current].children[v].index();
+            current = self.trie[current].children[v];
             
             for &pattern_idx in &self.pattern_indices {
                 if self.trie[pattern_idx].flag != 0 {
@@ -132,18 +93,20 @@ impl AhoCorasick {
 
     pub fn get_pattern_counts<'a>(&'a mut self, text: &'a str) -> impl Iterator<Item = usize> + 'a {
         let mut counts = vec![0; self.num_patterns + 1];
-        let mut current = 0;
+        let mut current = 1;
 
         for &b in text.as_bytes() {
-            current = if let Some(child) = self.trie[current].children.iter().find(|&c| c.char() == b) {
-                child.index()
-            } else {
-                0
-            };
+            let v = b as usize;
+            current = self.trie[current].children[v];
             self.trie[current].ans += 1;
         }
 
-        let mut queue: VecDeque<usize> = self.in_degree.iter().enumerate().filter(|(_, deg)| **deg == 0).map(|(i, _)| i).collect();
+        let mut queue = VecDeque::new();
+        for i in 1..self.trie.len() {
+            if self.in_degree[i] == 0 {
+                queue.push_back(i);
+            }
+        }
 
         while let Some(u) = queue.pop_front() {
             counts[self.trie[u].flag] = self.trie[u].ans;
@@ -157,5 +120,4 @@ impl AhoCorasick {
 
         (0..self.num_patterns).map(move |i| counts[self.pattern_indices[i]])
     }
-
 }
