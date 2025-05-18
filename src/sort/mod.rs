@@ -5,8 +5,7 @@ pub type Sorter<T> = fn(&mut [T], Comparator<T>);
 pub mod bench;
 use crate::tick;
 
-pub fn insertion_sort<T>(a: &mut [T], is_less: Comparator<T>)
-{
+pub fn insertion_sort<T>(a: &mut [T], is_less: Comparator<T>) {
     tick!();
     for i in 1..a.len() {
         let mut j = i;
@@ -17,8 +16,14 @@ pub fn insertion_sort<T>(a: &mut [T], is_less: Comparator<T>)
     }
 }
 
-fn merge<T: Copy>(a: &mut [T], aux: &mut [T], lo: usize, mid: usize, hi: usize, is_less: Comparator<T>)
-{
+fn merge<T: Copy>(
+    a: &mut [T],
+    aux: &mut [T],
+    lo: usize,
+    mid: usize,
+    hi: usize,
+    is_less: Comparator<T>,
+) {
     tick!();
     let mut i = lo;
     let mut j = mid + 1;
@@ -43,8 +48,13 @@ fn merge<T: Copy>(a: &mut [T], aux: &mut [T], lo: usize, mid: usize, hi: usize, 
     }
 }
 
-fn top_down_merge_sort_aux<T: Copy>(a: &mut [T], aux: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>)
-{
+fn top_down_merge_sort_aux<T: Copy>(
+    a: &mut [T],
+    aux: &mut [T],
+    lo: usize,
+    hi: usize,
+    is_less: Comparator<T>,
+) {
     tick!();
     if hi <= lo {
         return;
@@ -55,15 +65,13 @@ fn top_down_merge_sort_aux<T: Copy>(a: &mut [T], aux: &mut [T], lo: usize, hi: u
     merge(a, aux, lo, mid, hi, is_less);
 }
 
-pub fn top_down_merge_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>)
-{
+pub fn top_down_merge_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>) {
     tick!();
     let aux = &mut a.to_vec();
     top_down_merge_sort_aux(a, aux, 0, a.len() - 1, is_less);
 }
 
-pub fn bottom_up_merge_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>)
-{
+pub fn bottom_up_merge_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>) {
     tick!();
     use std::cmp::min;
     let aux = &mut a.to_vec();
@@ -80,8 +88,7 @@ pub fn bottom_up_merge_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>)
     }
 }
 
-fn partition<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>) -> usize
-{
+fn partition<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>) -> usize {
     tick!();
     let mut i = lo;
     let mut j = hi + 1;
@@ -104,8 +111,7 @@ fn partition<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>)
     j
 }
 
-fn quick_sort_aux<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>)
-{
+fn quick_sort_aux<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>) {
     tick!();
     if hi <= lo {
         return;
@@ -117,16 +123,14 @@ fn quick_sort_aux<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparato
     quick_sort_aux(a, j + 1, hi, is_less);
 }
 
-pub fn quick_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>)
-{
+pub fn quick_sort<T: Copy>(a: &mut [T], is_less: Comparator<T>) {
     tick!();
     use rand::{prelude::SliceRandom, rng};
     a.shuffle(&mut rng());
     quick_sort_aux(a, 0, a.len() - 1, is_less);
 }
 
-fn quick_sort_3way_aux<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>)
-{
+fn quick_sort_3way_aux<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comparator<T>) {
     tick!();
     if hi <= lo {
         return;
@@ -157,8 +161,7 @@ fn quick_sort_3way_aux<T: Copy>(a: &mut [T], lo: usize, hi: usize, is_less: Comp
     quick_sort_3way_aux(a, gt + 1, hi, is_less);
 }
 
-pub fn quick_sort_3way<T: Copy>(a: &mut [T], is_less: Comparator<T>)
-{
+pub fn quick_sort_3way<T: Copy>(a: &mut [T], is_less: Comparator<T>) {
     tick!();
     use rand::{prelude::SliceRandom, rng};
     a.shuffle(&mut rng());
@@ -215,5 +218,4 @@ mod tests {
         quick_sort_3way(&mut a, is_less);
         assert!(a.is_sorted());
     }
-
 }

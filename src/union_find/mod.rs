@@ -77,7 +77,6 @@ impl UnionFind for WeightedQuickUnion {
     }
 
     fn union(&mut self, p: usize, q: usize) {
-
         let rt_p = self.find(p);
         let rt_q = self.find(q);
         if rt_p == rt_q {
@@ -125,7 +124,6 @@ impl UnionFind for WeightedQuickUnionWithPathCompression {
     }
 
     fn union(&mut self, p: usize, q: usize) {
-
         let rt_p = self.find(p);
         let rt_q = self.find(q);
         if rt_p == rt_q {

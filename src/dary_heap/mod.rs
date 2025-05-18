@@ -13,7 +13,9 @@ impl<T: Ord, const D: usize> DaryHeap<T, D> {
 
     pub fn with_capacity(capacity: usize) -> Self {
         assert!(D >= 2, "D must be at least 2");
-        DaryHeap { data: Vec::with_capacity(capacity) }
+        DaryHeap {
+            data: Vec::with_capacity(capacity),
+        }
     }
 
     pub fn push(&mut self, item: T) {

@@ -1,12 +1,9 @@
-use std::time::Instant;
-use std::mem;
 use super::Sorter;
+use crate::utils::Placeholder;
+use crate::utils::{GLOBAL, measure};
 use rand::{distr::StandardUniform, prelude::Distribution, random};
-use crate::utils::{measure, Trallocator};
-use std::alloc::System;
-
-#[global_allocator]
-static GLOBAL: Trallocator<System> = Trallocator::new(System);
+use std::mem;
+use std::time::Instant;
 
 pub fn generate_random_array<T>(size: usize) -> Vec<T>
 where

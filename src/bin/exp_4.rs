@@ -1,7 +1,10 @@
-use aho_corasick::automaton::OverlappingState;
-// use algs4::aho_corasick;
-// use algs4::aho_corasick_v1;
 use aho_corasick::AhoCorasick;
+use aho_corasick::automaton::OverlappingState;
+use algs4::aho_corasick_bitmap;
+use algs4::aho_corasick_fixed_vector;
+use algs4::aho_corasick_hashmap;
+use algs4::utils::GLOBAL;
+use algs4::utils::Placeholder;
 use std::fs::{self, File};
 use std::io::{self, BufRead, Write};
 use std::path::Path;
@@ -11,6 +14,8 @@ fn main() -> io::Result<()> {
     // 获取所有词典文件
     let needle_dir = Path::new("ac_bench/needle");
     let haystack_dir = Path::new("ac_bench/haystack");
+    let bench_path = Path::new("./output/bench.txt");
+    let mut bench_file = File::create(bench_path)?;
 
     for needle_entry in fs::read_dir(needle_dir)? {
         let needle_path = needle_entry?.path();
@@ -18,71 +23,200 @@ fn main() -> io::Result<()> {
 
         // 读取词典文件
         let file = File::open(&needle_path)?;
-        let patterns: Vec<String> = io::BufReader::new(file)
+        let patterns: Vec<_> = io::BufReader::new(file)
             .lines()
             .map(|l| l.unwrap())
             .collect();
+        let mut patterns_to_sort = patterns
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(i, p)| (p, i as u32))
+            .collect::<Vec<_>>();
+
+        let start = Instant::now();
+        patterns_to_sort.sort_unstable();
+        let sort_duration = start.elapsed();
 
         // 对每个文本文件进行测试
         for haystack_entry in fs::read_dir(haystack_dir)? {
             let haystack_path = haystack_entry?.path();
             let haystack_name = haystack_path.file_stem().unwrap().to_str().unwrap();
-            
+
             // 读取文本文件
             let text = fs::read_to_string(&haystack_path)?;
 
-            // 测试 v1 版本
-            let start = Instant::now();
-            let mut ac_v1 = algs4::aho_corasick_v1::AhoCorasick::new();
-            for pattern in &patterns {
-                ac_v1.add_pattern(pattern);
-            }
-            ac_v1.build();
-            let counts_v1: Vec<usize> = ac_v1.get_pattern_counts(&text).collect();
-            let duration_v1 = start.elapsed();
+            // fixed vector
+            GLOBAL.reset();
 
-            // 测试 v2 版本
-            let start = Instant::now();
-            let mut ac_v2 = algs4::aho_corasick::AhoCorasick::new();
-            for pattern in &patterns {
-                ac_v2.add_pattern(pattern);
+            let start_build = Instant::now();
+            let mut ac_fixed_vector =
+                aho_corasick_fixed_vector::AhoCorasick::with_num_patterns(patterns.len());
+            for pattern in patterns.iter() {
+                ac_fixed_vector.add_pattern(pattern);
             }
-            ac_v2.build();
-            let counts_v2: Vec<usize> = ac_v2.get_pattern_counts(&text).collect();
-            let duration_v2 = start.elapsed();
+            ac_fixed_vector.build();
+            let build_duration_fixed_vector = start_build.elapsed();
 
-            let mut counts = vec![0; patterns.len()];
-            let start = Instant::now();
+            let start_count = Instant::now();
+            let counts_fixed_vector: Vec<_> = ac_fixed_vector.get_pattern_counts(&text).collect();
+            let count_duration_fixed_vector = start_count.elapsed();
+
+            let heap_usage_fixed_vector = GLOBAL.get();
+
+            // bitmap
+            GLOBAL.reset();
+            let start_build = Instant::now();
+            let mut ac_bitmap = aho_corasick_bitmap::AhoCorasick::new(&patterns_to_sort);
+            let build_duration_bitmap = start_build.elapsed();
+            let start_count = Instant::now();
+            let counts_bitmap: Vec<_> = ac_bitmap.get_pattern_counts(&text).collect();
+            let count_duration_bitmap = start_count.elapsed();
+
+            let heap_usage_bitmap = GLOBAL.get();
+
+            // hashmap
+            GLOBAL.reset();
+            let start_build = Instant::now();
+            let mut ac_hashmap =
+                aho_corasick_hashmap::AhoCorasick::with_num_patterns(patterns.len());
+            for pattern in patterns.iter() {
+                ac_hashmap.add_pattern(pattern);
+            }
+            ac_hashmap.build();
+            let build_duration_hashmap = start_build.elapsed();
+            let start_count = Instant::now();
+            let counts_hashmap: Vec<_> = ac_hashmap.get_pattern_counts(&text).collect();
+            let count_duration_hashmap = start_count.elapsed();
+
+            let heap_usage_hashmap = GLOBAL.get();
+
+            // crate
+            GLOBAL.reset();
+            let mut counts_crate = vec![0; patterns.len()];
+            let start_build = Instant::now();
             let ac = AhoCorasick::new(&patterns).unwrap();
+            let build_duration_crate = start_build.elapsed();
+
+            let start_count = Instant::now();
             let mut state = OverlappingState::start();
             ac.find_overlapping(&text, &mut state);
             while let Some(mat) = state.get_match() {
-                counts[mat.pattern().as_usize()] += 1;
+                counts_crate[mat.pattern().as_usize()] += 1;
                 ac.find_overlapping(&text, &mut state);
             }
-            let duration_v3 = start.elapsed();
+            let count_duration_crate = start_count.elapsed();
+
+            let heap_usage_crate = GLOBAL.get();
 
             // 输出结果
-            let output_path = format!("./output/{}_{}_v1.txt", needle_name, haystack_name);
+            let output_path = format!(
+                "./output/fixed_vector/{}_{}.txt",
+                needle_name, haystack_name
+            );
             let mut output_file = File::create(output_path)?;
-            writeln!(output_file, "Time: {:?}", duration_v1)?;
-            for count in counts_v1 {
+            writeln!(
+                output_file,
+                "Build Time: {:?}, Count Time: {:?}, Total Time: {:?}, Heap Usage: {:?}",
+                build_duration_fixed_vector,
+                count_duration_fixed_vector,
+                build_duration_fixed_vector + count_duration_fixed_vector,
+                heap_usage_fixed_vector
+            )?;
+            for count in counts_fixed_vector {
                 writeln!(output_file, "{}", count)?;
             }
 
-            let output_path = format!("./output/{}_{}_v2.txt", needle_name, haystack_name);
+            let output_path = format!("./output/bitmap/{}_{}.txt", needle_name, haystack_name);
             let mut output_file = File::create(output_path)?;
-            writeln!(output_file, "Time: {:?}", duration_v2)?;
-            for count in counts_v2 {
+            writeln!(
+                output_file,
+                "Sort Time: {:?}, Build Time: {:?}, Count Time: {:?}, Total Time: {:?}, Heap Usage: {:?}",
+                sort_duration,
+                build_duration_bitmap,
+                count_duration_bitmap,
+                sort_duration + build_duration_bitmap + count_duration_bitmap,
+                heap_usage_bitmap
+            )?;
+            for count in counts_bitmap {
                 writeln!(output_file, "{}", count)?;
             }
 
-            let output_path = format!("./output/{}_{}_crate.txt", needle_name, haystack_name);
+            let output_path = format!("./output/crate/{}_{}.txt", needle_name, haystack_name);
             let mut output_file = File::create(output_path)?;
-            writeln!(output_file, "Time: {:?}", duration_v3)?;
-            for count in counts {
+            writeln!(
+                output_file,
+                "Build Time: {:?}, Count Time: {:?}, Total Time: {:?}, Heap Usage: {:?}",
+                build_duration_crate,
+                count_duration_crate,
+                build_duration_crate + count_duration_crate,
+                heap_usage_crate
+            )?;
+            for count in counts_crate {
                 writeln!(output_file, "{}", count)?;
             }
+
+            let output_path = format!("./output/hashmap/{}_{}.txt", needle_name, haystack_name);
+            let mut output_file = File::create(output_path)?;
+            writeln!(
+                output_file,
+                "Build Time: {:?}, Count Time: {:?}, Total Time: {:?}, Heap Usage: {:?}",
+                build_duration_hashmap,
+                count_duration_hashmap,
+                build_duration_hashmap + count_duration_hashmap,
+                heap_usage_hashmap
+            )?;
+            for count in counts_hashmap {
+                writeln!(output_file, "{}", count)?;
+            }
+
+            writeln!(
+                bench_file,
+                "Dict: {}, Text: {}, Dict items: {}, Dict length: {}, Text length: {}",
+                needle_name,
+                haystack_name,
+                patterns.len(),
+                patterns.iter().map(|p| p.len()).sum::<usize>(),
+                text.len()
+            )?;
+            writeln!(bench_file, "Fixed vector:")?;
+            writeln!(
+                bench_file,
+                "Build time: {:?}, Count time: {:?}, Total time: {:?}, Heap Usage: {:?}",
+                build_duration_fixed_vector,
+                count_duration_fixed_vector,
+                build_duration_fixed_vector + count_duration_fixed_vector,
+                heap_usage_fixed_vector
+            )?;
+            writeln!(bench_file, "Bitmap:")?;
+            writeln!(
+                bench_file,
+                "Sort time: {:?}, Build time: {:?}, Count time: {:?}, Total time: {:?}, Heap Usage: {:?}",
+                sort_duration,
+                build_duration_bitmap,
+                count_duration_bitmap,
+                sort_duration + build_duration_bitmap + count_duration_bitmap,
+                heap_usage_bitmap
+            )?;
+            writeln!(bench_file, "Hashmap:")?;
+            writeln!(
+                bench_file,
+                "Build time: {:?}, Count time: {:?}, Total time: {:?}, Heap Usage: {:?}",
+                build_duration_hashmap,
+                count_duration_hashmap,
+                build_duration_hashmap + count_duration_hashmap,
+                heap_usage_hashmap
+            )?;
+            writeln!(bench_file, "Crate:")?;
+            writeln!(
+                bench_file,
+                "Build time: {:?}, Count time: {:?}, Total time: {:?}, Heap Usage: {:?}",
+                build_duration_crate,
+                count_duration_crate,
+                build_duration_crate + count_duration_crate,
+                heap_usage_crate
+            )?;
+            writeln!(bench_file, "--------------------------------")?;
         }
     }
 

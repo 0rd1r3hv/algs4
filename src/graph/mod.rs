@@ -1,6 +1,6 @@
-use std::collections::BinaryHeap;
 use ordered_float::NotNan;
 use std::cmp::Reverse;
+use std::collections::BinaryHeap;
 
 // use crate::dary_heap::DaryHeap;
 
@@ -25,9 +25,14 @@ pub struct Graph<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: b
     num_edges: usize,
 }
 
-impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<CALCPATH, HEURISTIC, EARLYSTOP> {
+impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
+    Graph<CALCPATH, HEURISTIC, EARLYSTOP>
+{
     pub fn new(size: usize, coord: &[(i32, i32)]) -> Self {
-        println!("HEURISTIC: {}, EARLYSTOP: {}, CALCPATH: {}", HEURISTIC, EARLYSTOP, CALCPATH);
+        println!(
+            "HEURISTIC: {}, EARLYSTOP: {}, CALCPATH: {}",
+            HEURISTIC, EARLYSTOP, CALCPATH
+        );
         Graph {
             edges: vec![vec![]; size],
             coord: coord.to_vec(),
@@ -44,16 +49,13 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<C
 
     pub fn add_edge(&mut self, from: usize, to: usize) {
         self.num_edges += 1;
-        self.edges[from].push(
-            Edge {
-                to,
-                weight: Self::euclidean_dist(self.coord[from], self.coord[to])
-            }
-        );
+        self.edges[from].push(Edge {
+            to,
+            weight: Self::euclidean_dist(self.coord[from], self.coord[to]),
+        });
     }
 
     pub fn dijkstra(&mut self, start: usize, end: usize) -> f64 {
-
         if EARLYSTOP {
             while let Some(v) = self.changed.pop() {
                 self.distances[v] = f64::INFINITY;
@@ -70,7 +72,6 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<C
             self.path[end] = end;
         }
 
-
         if HEURISTIC {
             self.distances[start] = Self::euclidean_dist(self.coord[start], self.coord[end]);
         } else {
@@ -84,11 +85,14 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<C
 
         let heap = &mut self.heap;
         heap.clear();
-        heap.push((Reverse(DistWrapper::new(self.distances[start]).unwrap()), start));
+        heap.push((
+            Reverse(DistWrapper::new(self.distances[start]).unwrap()),
+            start,
+        ));
 
         while let Some((dist_wrapper, u)) = heap.pop() {
             let dist: f64 = dist_wrapper.0.into();
-            
+
             if self.calced[u] {
                 continue;
             }
@@ -100,7 +104,7 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<C
                 }
             }
 
-            for &Edge {to: v, weight} in &self.edges[u] {
+            for &Edge { to: v, weight } in &self.edges[u] {
                 if self.calced[v] {
                     continue;
                 }
@@ -108,7 +112,9 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<C
                 let next_dist;
 
                 if HEURISTIC {
-                    next_dist = dist + weight + Self::euclidean_dist(self.coord[v], self.coord[end]) - Self::euclidean_dist(self.coord[u], self.coord[end]);
+                    next_dist =
+                        dist + weight + Self::euclidean_dist(self.coord[v], self.coord[end])
+                            - Self::euclidean_dist(self.coord[u], self.coord[end]);
                 } else {
                     next_dist = dist + weight;
                 }
@@ -148,11 +154,10 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool> Graph<C
         let mut current = end;
         while current != self.path[current] {
             path.push(current);
-            current = self.path[current];   
+            current = self.path[current];
         }
         path.push(start);
         path.reverse();
         path
     }
-    
 }

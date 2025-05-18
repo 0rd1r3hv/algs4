@@ -1,9 +1,9 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
 use algs4::graph::*;
-use std::time::{Duration, Instant};
 use clap::{Arg, Command};
+use std::fs::File;
 use std::io::Write;
+use std::io::{BufRead, BufReader};
+use std::time::{Duration, Instant};
 
 const EARLYSTOP: bool = false;
 const HEURISTIC: bool = true;
@@ -37,19 +37,37 @@ fn main() {
         let mut lines = reader.lines();
 
         // 读取节点数和边数
-        let first_line = lines.next().expect("No first line").expect("Failed to read first line");
+        let first_line = lines
+            .next()
+            .expect("No first line")
+            .expect("Failed to read first line");
         let mut parts = first_line.split_whitespace();
         let n: usize = parts.next().expect("No n").parse().expect("Invalid n");
         let m: usize = parts.next().expect("No m").parse().expect("Invalid m");
-        
+
         // 读取节点坐标
         let mut coord = vec![(0, 0); n];
         for _ in 0..n {
-            let line = lines.next().expect("Missing node line").expect("Failed to read node line");
+            let line = lines
+                .next()
+                .expect("Missing node line")
+                .expect("Failed to read node line");
             let mut parts = line.split_whitespace();
-            let u: usize = parts.next().expect("No node id").parse().expect("Invalid node id");
-            let x: i32 = parts.next().expect("No x coordinate").parse().expect("Invalid x coordinate");
-            let y: i32 = parts.next().expect("No y coordinate").parse().expect("Invalid y coordinate");
+            let u: usize = parts
+                .next()
+                .expect("No node id")
+                .parse()
+                .expect("Invalid node id");
+            let x: i32 = parts
+                .next()
+                .expect("No x coordinate")
+                .parse()
+                .expect("Invalid x coordinate");
+            let y: i32 = parts
+                .next()
+                .expect("No y coordinate")
+                .parse()
+                .expect("Invalid y coordinate");
             coord[u] = (x, y);
         }
 
@@ -58,10 +76,21 @@ fn main() {
         // 构建图
         let mut graph = Graph::<CALCPATH, HEURISTIC, EARLYSTOP>::new(n, &coord);
         for _ in 0..m {
-            let line = lines.next().expect("Missing edge line").expect("Failed to read edge line");
+            let line = lines
+                .next()
+                .expect("Missing edge line")
+                .expect("Failed to read edge line");
             let mut parts = line.split_whitespace();
-            let u: usize = parts.next().expect("No node id").parse().expect("Invalid node id");
-            let v: usize = parts.next().expect("No node id").parse().expect("Invalid node id");
+            let u: usize = parts
+                .next()
+                .expect("No node id")
+                .parse()
+                .expect("Invalid node id");
+            let v: usize = parts
+                .next()
+                .expect("No node id")
+                .parse()
+                .expect("Invalid node id");
             graph.add_edge(u, v);
             graph.add_edge(v, u);
         }
@@ -70,8 +99,13 @@ fn main() {
 
     // 测试文件列表
     let test_files = [
-        "usa-1.txt", "usa-10.txt", "usa-100long.txt", "usa-100short.txt",
-        "usa-1000long.txt", "usa-5000short.txt", "usa-50000short.txt"
+        "usa-1.txt",
+        "usa-10.txt",
+        "usa-100long.txt",
+        "usa-100short.txt",
+        "usa-1000long.txt",
+        "usa-5000short.txt",
+        "usa-50000short.txt",
     ];
 
     // 对每个测试文件进行测试
@@ -86,8 +120,16 @@ fn main() {
         for line in reader.lines() {
             let line = line.expect("Failed to read line");
             let mut parts = line.split_whitespace();
-            let start: usize = parts.next().expect("No start node").parse().expect("Invalid start node");
-            let end: usize = parts.next().expect("No end node").parse().expect("Invalid end node");
+            let start: usize = parts
+                .next()
+                .expect("No start node")
+                .parse()
+                .expect("Invalid start node");
+            let end: usize = parts
+                .next()
+                .expect("No end node")
+                .parse()
+                .expect("Invalid end node");
 
             let start_time = Instant::now();
             let dist = graph.dijkstra(start, end);
@@ -95,9 +137,11 @@ fn main() {
             if CALCPATH {
                 let path = graph.get_path(start, end);
                 for node in path {
-                    file.write_all(format!("{} ", node).as_bytes()).expect("Failed to write to file");
+                    file.write_all(format!("{} ", node).as_bytes())
+                        .expect("Failed to write to file");
                 }
-                file.write_all(format!("{} ", dist).as_bytes()).expect("Failed to write to file");
+                file.write_all(format!("{} ", dist).as_bytes())
+                    .expect("Failed to write to file");
                 file.write_all(b"\n").expect("Failed to write to file");
             }
             count += 1;
@@ -112,11 +156,11 @@ fn main() {
     // 随机测试
     let mut rng = rand::rng();
     let mut total_time = Duration::new(0, 0);
-    
+
     for _ in 0..*tests {
         let start = rand::Rng::random_range(&mut rng, 0..n);
         let end = rand::Rng::random_range(&mut rng, 0..n);
-        
+
         let start_time = Instant::now();
         graph.dijkstra(start, end);
         total_time += start_time.elapsed();
@@ -125,5 +169,4 @@ fn main() {
     println!("Random tests ({} pairs):", tests);
     println!("Total time: {:?}", total_time);
     println!("Average time: {:?}", total_time / *tests as u32);
-
 }
