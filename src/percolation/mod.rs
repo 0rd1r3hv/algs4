@@ -1,4 +1,8 @@
 use crate::union_find::UnionFind;
+use bitvec::{
+    prelude::*,
+    ptr::{Const, Mut},
+};
 use std::{
     fmt::Display,
     marker::PhantomData,
@@ -6,10 +10,11 @@ use std::{
 };
 
 struct Percolation<U: UnionFind> {
-    grid: Vec<Vec<bool>>,
+    grid: BitVec,
     size: usize,
     top: usize,
     bottom: usize,
+    last_row: usize,
     uf: U,
 }
 
@@ -25,82 +30,109 @@ pub struct PercolationStats<U: UnionFind> {
 }
 
 impl<U: UnionFind> Percolation<U> {
+    #[inline]
     pub fn new(size: usize) -> Self {
-        let grid = vec![vec![false; size]; size];
         let top = size * size;
         let bottom = top + 1;
+        let grid = bitvec![0; top];
         let uf = U::new(bottom + 1);
         Self {
             grid,
             size,
             top,
             bottom,
+            last_row: size * (size - 1),
             uf,
         }
     }
 
-    pub fn is_open(&self, row: usize, col: usize) -> bool {
-        self.grid[row][col]
+    #[inline]
+    fn get_grid(&self, pos: usize) -> BitRef<Const, usize> {
+        unsafe { self.grid.get_unchecked(pos) }
     }
 
+    #[inline]
+    fn get_grid_mut(&mut self, pos: usize) -> BitRef<Mut, usize> {
+        unsafe { self.grid.get_unchecked_mut(pos) }
+    }
+
+    #[inline]
+    pub fn is_open(&self, pos: usize) -> bool {
+        *self.get_grid(pos)
+    }
+
+    #[inline]
     pub fn percolates(&mut self) -> bool {
         self.uf.connected(self.top, self.bottom)
     }
 
-    pub fn index(&self, row: usize, col: usize) -> usize {
-        row * self.size + col
+    #[inline]
+    pub fn open(&mut self, pos: usize) {
+        *self.get_grid_mut(pos) = true;
+
+        // Case size = 1 is not intended to be considered
+        if pos < self.size {
+            self.uf.union(pos, self.top);
+            if self.is_open(pos + self.size) {
+                self.uf.union(pos, pos + self.size);
+            }
+        } else {
+            if self.is_open(pos - self.size) {
+                self.uf.union(pos, pos - self.size);
+            }
+            if pos >= self.last_row {
+                self.uf.union(pos, self.bottom);
+            } else if self.is_open(pos + self.size) {
+                self.uf.union(pos, pos + self.size);
+            }
+        }
+
+        let col = pos % self.size;
+        if col == 0 {
+            if self.is_open(pos + 1) {
+                self.uf.union(pos, pos + 1);
+            }
+        } else {
+            if self.is_open(pos - 1) {
+                self.uf.union(pos, pos - 1);
+            }
+            if col != self.size - 1 && self.is_open(pos + 1) {
+                self.uf.union(pos, pos + 1);
+            }
+        }
     }
 
-    pub fn open(&mut self, row: usize, col: usize) {
-        self.grid[row][col] = true;
-        let idx = self.index(row, col);
-
-        if row == 0 {
-            self.uf.union(idx, self.top);
-        }
-        if row == self.size - 1 {
-            self.uf.union(idx, self.bottom);
-        }
-        if row != 0 && self.is_open(row - 1, col) {
-            self.uf.union(idx, idx - self.size);
-        }
-        if row != self.size - 1 && self.is_open(row + 1, col) {
-            self.uf.union(idx, idx + self.size);
-        }
-        if col != 0 && self.is_open(row, col - 1) {
-            self.uf.union(idx, idx - 1);
-        }
-        if col != self.size - 1 && self.is_open(row, col + 1) {
-            self.uf.union(idx, idx + 1);
-        }
+    #[inline]
+    pub fn reset(&mut self) {
+        self.grid.fill(false);
+        self.uf.reset();
     }
 }
 
 impl<U: UnionFind> PercolationStats<U> {
+    #[inline]
     pub fn new(size: usize, trials: usize) -> Self {
         use rand::Rng;
         let mut results = vec![0.0; trials];
-        let sq_size = size * size;
         let mut rng = rand::rng();
+        let mut percolation = Percolation::<U>::new(size);
+        let sq_size = size * size;
 
         let start_time = Instant::now();
-        for result in &mut results {
-            let mut percolation = Percolation::<U>::new(size);
+        results.iter_mut().for_each(|result| {
             while !percolation.percolates() {
-                let mut row = rng.random_range(0..size);
-                let mut col = rng.random_range(0..size);
-                while percolation.is_open(row, col) {
-                    row = rng.random_range(0..size);
-                    col = rng.random_range(0..size);
+                let mut pos = rng.random_range(0..sq_size);
+                while percolation.is_open(pos) {
+                    pos = rng.random_range(0..sq_size);
                 }
-                percolation.open(row, col);
+                percolation.open(pos);
                 *result += 1.0;
             }
+            percolation.reset();
             *result /= sq_size as f64;
-        }
-        let end_time = Instant::now();
+        });
 
-        let time = end_time.duration_since(start_time);
+        let time = start_time.elapsed();
         let mean = results.iter().sum::<f64>() / trials as f64;
         let stddev =
             (results.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (trials - 1) as f64).sqrt();
@@ -121,10 +153,16 @@ impl<U: UnionFind> PercolationStats<U> {
 }
 
 impl<U: UnionFind> Display for PercolationStats<U> {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(
+            f,
+            "Algorithm               = {}",
+            std::any::type_name::<U>()
+        )?;
         writeln!(f, "n                       = {}", self.size)?;
         writeln!(f, "trials                  = {}", self.trials)?;
-        writeln!(f, "time taken              = {}", self.time.as_secs_f64())?;
+        writeln!(f, "time taken              = {:?}", self.time)?;
         writeln!(f, "mean                    = {}", self.mean)?;
         writeln!(f, "stddev                  = {}", self.stddev)?;
         writeln!(

@@ -3,18 +3,22 @@ use aho_corasick::automaton::OverlappingState;
 use algs4::aho_corasick_bitmap;
 use algs4::aho_corasick_fixed_vector;
 use algs4::aho_corasick_hashmap;
-use algs4::utils::GLOBAL;
-use algs4::utils::Placeholder;
+use algs4::utils::{Placeholder, Trallocator};
+use std::alloc::System;
 use std::fs::{self, File};
 use std::io::{self, BufRead, Write};
 use std::path::Path;
 use std::time::Instant;
 
+#[global_allocator]
+static GLOBAL: Trallocator<System> = Trallocator::new(System);
+// static GLOBAL: System = System;
+
 fn main() -> io::Result<()> {
     // 获取所有词典文件
     let needle_dir = Path::new("ac_bench/needle");
     let haystack_dir = Path::new("ac_bench/haystack");
-    let bench_path = Path::new("./output/bench.txt");
+    let bench_path = Path::new("./output/exp_4/bench.txt");
     let mut bench_file = File::create(bench_path)?;
 
     for needle_entry in fs::read_dir(needle_dir)? {
@@ -111,7 +115,7 @@ fn main() -> io::Result<()> {
 
             // 输出结果
             let output_path = format!(
-                "./output/fixed_vector/{}_{}.txt",
+                "./output/exp_4/fixed_vector/{}_{}.txt",
                 needle_name, haystack_name
             );
             let mut output_file = File::create(output_path)?;
@@ -127,7 +131,10 @@ fn main() -> io::Result<()> {
                 writeln!(output_file, "{}", count)?;
             }
 
-            let output_path = format!("./output/bitmap/{}_{}.txt", needle_name, haystack_name);
+            let output_path = format!(
+                "./output/exp_4/bitmap/{}_{}.txt",
+                needle_name, haystack_name
+            );
             let mut output_file = File::create(output_path)?;
             writeln!(
                 output_file,
@@ -142,7 +149,7 @@ fn main() -> io::Result<()> {
                 writeln!(output_file, "{}", count)?;
             }
 
-            let output_path = format!("./output/crate/{}_{}.txt", needle_name, haystack_name);
+            let output_path = format!("./output/exp_4/crate/{}_{}.txt", needle_name, haystack_name);
             let mut output_file = File::create(output_path)?;
             writeln!(
                 output_file,
@@ -156,7 +163,10 @@ fn main() -> io::Result<()> {
                 writeln!(output_file, "{}", count)?;
             }
 
-            let output_path = format!("./output/hashmap/{}_{}.txt", needle_name, haystack_name);
+            let output_path = format!(
+                "./output/exp_4/hashmap/{}_{}.txt",
+                needle_name, haystack_name
+            );
             let mut output_file = File::create(output_path)?;
             writeln!(
                 output_file,

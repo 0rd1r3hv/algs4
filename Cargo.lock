@@ -18,8 +18,10 @@ dependencies = [
  "aho-corasick",
  "bitvec",
  "clap",
+ "dary_heap",
  "ethnum",
  "fnv",
+ "likely_stable",
  "ordered-float",
  "rand",
 ]
@@ -138,6 +140,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b63caa9aa9397e2d9480a9b13673856c78d8ac123288526c37d7839f2a86990"
 
 [[package]]
+name = "dary_heap"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04d2cd9c18b9f454ed67da600630b021a8a80bf33f8c95896ab33aaf1c26b728"
+
+[[package]]
 name = "ethnum"
 version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -178,6 +186,15 @@ name = "libc"
 version = "0.2.171"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
+
+[[package]]
+name = "likely_stable"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d61f7017d8abea1fc23ff7f01a8147b2656dea3aeb24d519aab6e2177eaf671c"
+dependencies = [
+ "rustc_version",
+]
 
 [[package]]
 name = "memchr"
@@ -277,6 +294,21 @@ checksum = "99d9a13982dcf210057a8a78572b2217b667c3beacbf3a0d8b454f6f82837d38"
 dependencies = [
  "getrandom",
 ]
+
+[[package]]
+name = "rustc_version"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfcb3a22ef46e85b45de6ee7e79d063319ebb6594faafcf1c225ea92ab6e9b92"
+dependencies = [
+ "semver",
+]
+
+[[package]]
+name = "semver"
+version = "1.0.26"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "56e6fa9c48d24d85fb3de5ad847117517440f6beceb7798af16b4a87d616b8d0"
 
 [[package]]
 name = "strsim"

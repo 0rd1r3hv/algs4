@@ -1,103 +1,138 @@
-use std::iter::FromIterator;
+use likely_stable::{likely, unlikely};
+use std::ptr;
 
 #[derive(Debug)]
 pub struct DaryHeap<T, const D: usize> {
     data: Vec<T>,
+    _assertion: AssertD<D>,
+}
+
+#[derive(Debug)]
+struct AssertD<const D: usize>;
+
+impl<const D: usize> AssertD<D> {
+    const _ASSERTION: () = assert!(D >= 2, "D must be at least 2");
 }
 
 impl<T: Ord, const D: usize> DaryHeap<T, D> {
+    #[inline]
     pub fn new() -> Self {
-        assert!(D >= 2, "D must be at least 2");
-        DaryHeap { data: Vec::new() }
+        DaryHeap {
+            data: Vec::new(),
+            _assertion: AssertD::<D>,
+        }
     }
 
+    #[inline]
     pub fn with_capacity(capacity: usize) -> Self {
-        assert!(D >= 2, "D must be at least 2");
         DaryHeap {
             data: Vec::with_capacity(capacity),
+            _assertion: AssertD::<D>,
         }
     }
 
-    pub fn push(&mut self, item: T) {
-        self.data.push(item);
-        self.sift_up(self.data.len() - 1);
-    }
-
-    pub fn pop(&mut self) -> Option<T> {
-        if self.data.is_empty() {
-            return None;
-        }
-        let last_idx = self.data.len() - 1;
-        self.data.swap(0, last_idx);
-        let result = self.data.pop();
-        if !self.data.is_empty() {
-            self.sift_down(0);
-        }
-        result
-    }
-
-    pub fn clear(&mut self) {
-        self.data.clear();
-    }
-
+    #[inline]
     pub fn peek(&self) -> Option<&T> {
         self.data.first()
     }
 
-    fn sift_up(&mut self, mut idx: usize) {
-        while idx > 0 {
-            let parent = (idx - 1) / D;
-            if self.data[idx] <= self.data[parent] {
+    #[inline]
+    pub fn push(&mut self, item: T) {
+        let mut child = self.data.len();
+        self.data.push(item);
+        let item = unsafe { ptr::read(self.get(child)) };
+        while child > 0 {
+            let parent = (child - 1) / D;
+            if item <= *self.get(parent) {
                 break;
             }
-            self.data.swap(idx, parent);
-            idx = parent;
+            unsafe {
+                ptr::copy_nonoverlapping(self.data.as_ptr().add(parent), self.data.as_mut_ptr().add(child), 1);
+            }
+            child = parent;
         }
+        *self.get_mut(child) = item;
     }
 
-    fn sift_down(&mut self, mut idx: usize) {
-        let len = self.data.len();
-        loop {
-            let mut max_idx = idx;
-            let start = idx * D + 1;
-            let end = (start + D).min(len);
+    #[inline]
+    pub fn pop(&mut self) -> Option<T> {
+        match self.data.len() {
+            0 => None,
+            len => {
+                let last_idx = len - 1;
+                let ret = unsafe { ptr::read(self.data.as_ptr()) };
+                if likely(last_idx != 0) {
+                    let item = unsafe { ptr::read(self.get(last_idx)) };
+                    let mut parent = 0;
+                    let mut child = 1;
+                    let mut max_idx;
+                    while child + D <= last_idx {
+                        max_idx = child;
+                        for i in child..(child + D) {
+                            if self.get(i) > self.get(max_idx) {
+                                max_idx = i;
+                            }
+                        }
 
-            for i in start..end {
-                if self.data[i] > self.data[max_idx] {
-                    max_idx = i;
+                        if *self.get(max_idx) <= item {
+                            *self.get_mut(parent) = item;
+                            unsafe {
+                                self.data.set_len(last_idx);
+                                return Some(ret);
+                            }
+                        }
+
+                        unsafe {
+                            ptr::copy_nonoverlapping(
+                                self.data.as_ptr().add(max_idx),
+                                self.data.as_mut_ptr().add(parent),
+                                1,
+                            );
+                        }
+                        parent = max_idx;
+                        child = parent * D + 1;
+                    }
+                    if unlikely(child < last_idx) {
+                        max_idx = child;
+                        for i in child..last_idx {
+                            if self.get(i) > self.get(max_idx) {
+                                max_idx = i;
+                            }
+                        }
+                        if *self.get(max_idx) > item {
+                            unsafe {
+                                ptr::copy_nonoverlapping(
+                                    self.data.as_ptr().add(max_idx),
+                                    self.data.as_mut_ptr().add(parent),
+                                    1,
+                                );
+                            }
+                            parent = max_idx;
+                        }
+                    }
+                    *self.get_mut(parent) = item;
+                }
+                unsafe {
+                    self.data.set_len(last_idx);
+                    Some(ret)
                 }
             }
-
-            if max_idx == idx {
-                break;
-            }
-
-            self.data.swap(idx, max_idx);
-            idx = max_idx;
         }
     }
-}
 
-impl<T: Ord, const D: usize> Default for DaryHeap<T, D> {
-    fn default() -> Self {
-        Self::new()
+    #[inline]
+    pub fn clear(&mut self) {
+        self.data.clear();
     }
-}
 
-impl<T: Ord, const D: usize> From<Vec<T>> for DaryHeap<T, D> {
-    fn from(vec: Vec<T>) -> Self {
-        let mut heap = DaryHeap { data: vec };
-        for i in (0..heap.data.len() / D).rev() {
-            heap.sift_down(i);
-        }
-        heap
+    #[inline]
+    fn get(&self, idx: usize) -> &T {
+        unsafe { self.data.get_unchecked(idx) }
     }
-}
 
-impl<T: Ord, const D: usize> FromIterator<T> for DaryHeap<T, D> {
-    fn from_iter<I: IntoIterator<Item = T>>(iter: I) -> Self {
-        let vec: Vec<T> = iter.into_iter().collect();
-        vec.into()
+    #[inline]
+    fn get_mut(&mut self, idx: usize) -> &mut T {
+        unsafe { self.data.get_unchecked_mut(idx) }
     }
 }
 
@@ -107,43 +142,23 @@ mod tests {
     use rand::Rng;
 
     #[test]
-    fn test_basic_operations() {
-        let mut heap: DaryHeap<i32, 3> = DaryHeap::new();
-        heap.push(1);
-        heap.push(2);
-        heap.push(3);
-        assert_eq!(heap.peek(), Some(&3));
-        assert_eq!(heap.pop(), Some(3));
-        assert_eq!(heap.pop(), Some(2));
-        assert_eq!(heap.pop(), Some(1));
-        assert_eq!(heap.pop(), None);
-    }
-
-    #[test]
     fn test_random_operations() {
         let mut rng = rand::rng();
         let mut heap: DaryHeap<i32, 4> = DaryHeap::new();
         let mut vec = Vec::new();
 
-        // 随机插入1000个数字
-        for _ in 0..1000 {
-            let num = rng.random_range(-1000..1000);
+        // 随机插入10000个数字
+        for _ in 0..10000 {
+            let num = rng.random_range(i32::MIN..i32::MAX);
             heap.push(num);
             vec.push(num);
         }
 
         // 验证堆的性质
         vec.sort_unstable_by(|a, b| b.cmp(a));
-        for &expected in &vec {
-            assert_eq!(heap.pop(), Some(expected));
-        }
+        vec.iter().for_each(|&num| {
+            assert_eq!(heap.pop(), Some(num));
+        });
         assert_eq!(heap.pop(), None);
-    }
-
-    #[test]
-    fn test_from_iter() {
-        let vec = vec![1, 2, 3, 4, 5];
-        let heap: DaryHeap<i32, 3> = vec.into_iter().collect();
-        assert_eq!(heap.peek(), Some(&5));
     }
 }

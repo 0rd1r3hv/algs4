@@ -5,7 +5,7 @@ use std::io::Write;
 use std::io::{BufRead, BufReader};
 use std::time::{Duration, Instant};
 
-const EARLYSTOP: bool = false;
+const EARLYSTOP: bool = true;
 const HEURISTIC: bool = true;
 const CALCPATH: bool = true;
 
@@ -16,14 +16,14 @@ fn main() {
                 .short('i')
                 .long("input")
                 .value_parser(clap::value_parser!(String))
-                .default_value("usa.txt"),
+                .default_value("dijkstra_bench/usa.txt"),
         )
         .arg(
             Arg::new("tests")
                 .short('t')
                 .long("tests")
                 .value_parser(clap::value_parser!(i32))
-                .default_value("100"),
+                .default_value("1000"),
         )
         .get_matches();
 
@@ -110,11 +110,14 @@ fn main() {
 
     // 对每个测试文件进行测试
     for test_file in test_files {
-        let file = File::open(test_file).expect("Failed to open test file");
+        let file =
+            File::open(format!("dijkstra_bench/{}", test_file)).expect("Failed to open test file");
         let reader = BufReader::new(file);
         let mut total_time = Duration::new(0, 0);
+        let mut total_dist = 0.0;
+        let mut total_num_nodes = 0;
         let mut count = 0;
-        let output_file = format!("output/{}", test_file);
+        let output_file = format!("output/exp_3/{}", test_file);
         let mut file = File::create(output_file).expect("Failed to create output file");
 
         for line in reader.lines() {
@@ -134,15 +137,16 @@ fn main() {
             let start_time = Instant::now();
             let dist = graph.dijkstra(start, end);
             total_time += start_time.elapsed();
+            total_dist += dist;
             if CALCPATH {
-                let path = graph.get_path(start, end);
-                for node in path {
+                let (num_nodes, path) = graph.get_path(start, end);
+                total_num_nodes += num_nodes;
+                path.for_each(|node| {
                     file.write_all(format!("{} ", node).as_bytes())
                         .expect("Failed to write to file");
-                }
-                file.write_all(format!("{} ", dist).as_bytes())
+                });
+                file.write_all(format!("{}\n", dist).as_bytes())
                     .expect("Failed to write to file");
-                file.write_all(b"\n").expect("Failed to write to file");
             }
             count += 1;
         }
@@ -150,6 +154,8 @@ fn main() {
         println!("File: {}", test_file);
         println!("Total time: {:?}", total_time);
         println!("Average time: {:?}", total_time / count);
+        println!("Average num nodes: {}", total_num_nodes / count as usize);
+        println!("Average dist: {}", total_dist / count as f64);
         println!();
     }
 

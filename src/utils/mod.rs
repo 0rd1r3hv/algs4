@@ -3,9 +3,6 @@ use std::alloc::{GlobalAlloc, Layout};
 use std::cell::Cell;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::usize;
-#[global_allocator]
-pub static GLOBAL: Trallocator<System> = Trallocator::new(System);
-// pub static GLOBAL: System = System;
 
 pub trait Placeholder {
     fn reset(&self);
