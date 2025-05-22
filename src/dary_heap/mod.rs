@@ -1,6 +1,5 @@
 use likely_stable::{likely, unlikely};
-use std::ptr;
-
+use std::{fmt::Debug, ptr};
 #[derive(Debug)]
 pub struct DaryHeap<T, const D: usize> {
     data: Vec<T>,
@@ -38,85 +37,116 @@ impl<T: Ord, const D: usize> DaryHeap<T, D> {
 
     #[inline]
     pub fn push(&mut self, item: T) {
-        let mut child = self.data.len();
-        self.data.push(item);
-        let item = unsafe { ptr::read(self.get(child)) };
-        while child > 0 {
-            let parent = (child - 1) / D;
-            if item <= *self.get(parent) {
-                break;
+        if unlikely(self.data.len() == 0) {
+            self.data.push(item);
+            return;
+        } else {
+            let mut child = self.data.len();
+            let mut parent = (child - 1) / D;
+            if unsafe { item <= *self.get(parent) } {
+                self.data.push(item);
+                return;
+            }
+            self.data.push(unsafe { ptr::read(self.get(parent)) });
+            child = parent;
+            while child > 0 {
+                parent = (child - 1) / D;
+                if unsafe { item <= *self.get(parent) } {
+                    unsafe {
+                        *self.get_mut(child) = item;
+                    }
+                    return;
+                }
+                unsafe {
+                    ptr::copy_nonoverlapping(
+                        self.data.as_ptr().add(parent),
+                        self.data.as_mut_ptr().add(child),
+                        1,
+                    );
+                }
+                child = parent;
             }
             unsafe {
-                ptr::copy_nonoverlapping(self.data.as_ptr().add(parent), self.data.as_mut_ptr().add(child), 1);
+                *self.get_mut(child) = item;
             }
-            child = parent;
         }
-        *self.get_mut(child) = item;
     }
 
     #[inline]
     pub fn pop(&mut self) -> Option<T> {
-        match self.data.len() {
-            0 => None,
-            len => {
-                let last_idx = len - 1;
-                let ret = unsafe { ptr::read(self.data.as_ptr()) };
-                if likely(last_idx != 0) {
-                    let item = unsafe { ptr::read(self.get(last_idx)) };
-                    let mut parent = 0;
-                    let mut child = 1;
-                    let mut max_idx;
-                    while child + D <= last_idx {
-                        max_idx = child;
-                        for i in child..(child + D) {
-                            if self.get(i) > self.get(max_idx) {
-                                max_idx = i;
+        if unlikely(self.data.len() == 0) {
+            return None;
+        } else {
+            let last_idx = self.data.len() - 1;
+            let ret = unsafe { ptr::read(self.data.as_ptr()) };
+            if likely(last_idx != 0) {
+                let item = unsafe { ptr::read(self.get(last_idx)) };
+                let mut parent = 0;
+                let mut child = 1;
+                while child <= last_idx.saturating_sub(D) {
+                    if D == 2 {
+                        child += unsafe { self.get(child + 1) > self.get(child) } as usize;
+                    } else {
+                        for i in (child + 1)..(child + D) {
+                            if unsafe { self.get(i) > self.get(child) } {
+                                child = i;
                             }
-                        }
-
-                        if *self.get(max_idx) <= item {
-                            *self.get_mut(parent) = item;
-                            unsafe {
-                                self.data.set_len(last_idx);
-                                return Some(ret);
-                            }
-                        }
-
-                        unsafe {
-                            ptr::copy_nonoverlapping(
-                                self.data.as_ptr().add(max_idx),
-                                self.data.as_mut_ptr().add(parent),
-                                1,
-                            );
-                        }
-                        parent = max_idx;
-                        child = parent * D + 1;
-                    }
-                    if unlikely(child < last_idx) {
-                        max_idx = child;
-                        for i in child..last_idx {
-                            if self.get(i) > self.get(max_idx) {
-                                max_idx = i;
-                            }
-                        }
-                        if *self.get(max_idx) > item {
-                            unsafe {
-                                ptr::copy_nonoverlapping(
-                                    self.data.as_ptr().add(max_idx),
-                                    self.data.as_mut_ptr().add(parent),
-                                    1,
-                                );
-                            }
-                            parent = max_idx;
                         }
                     }
+
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            self.data.as_ptr().add(child),
+                            self.data.as_mut_ptr().add(parent),
+                            1,
+                        );
+                    }
+                    parent = child;
+                    child = parent * D + 1;
+                }
+                if unlikely(child < last_idx) {
+                    if D > 2 {
+                        for i in (child + 1)..last_idx {
+                            if unsafe { self.get(i) > self.get(child) } {
+                                child = i;
+                            }
+                        }
+                    }
+
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            self.data.as_ptr().add(child),
+                            self.data.as_mut_ptr().add(parent),
+                            1,
+                        );
+                    }
+                    parent = child;
+
+                }
+
+                while parent > 0 {
+                    let parent_parent = (parent - 1) / D;
+                    if unsafe { item <= *self.get(parent_parent) } {
+                        break;
+                    }
+                    unsafe {
+                        ptr::copy_nonoverlapping(
+                            self.data.as_ptr().add(parent_parent),
+                            self.data.as_mut_ptr().add(parent),
+                            1,
+                        );
+                    }
+                    parent = parent_parent;
+                }
+
+                unsafe {
                     *self.get_mut(parent) = item;
                 }
-                unsafe {
-                    self.data.set_len(last_idx);
-                    Some(ret)
-                }
             }
+            unsafe {
+                self.data.set_len(last_idx);
+            }
+            Some(ret)
         }
     }
 
@@ -126,12 +156,12 @@ impl<T: Ord, const D: usize> DaryHeap<T, D> {
     }
 
     #[inline]
-    fn get(&self, idx: usize) -> &T {
+    unsafe fn get(&self, idx: usize) -> &T {
         unsafe { self.data.get_unchecked(idx) }
     }
 
     #[inline]
-    fn get_mut(&mut self, idx: usize) -> &mut T {
+    unsafe fn get_mut(&mut self, idx: usize) -> &mut T {
         unsafe { self.data.get_unchecked_mut(idx) }
     }
 }
@@ -144,17 +174,15 @@ mod tests {
     #[test]
     fn test_random_operations() {
         let mut rng = rand::rng();
-        let mut heap: DaryHeap<i32, 4> = DaryHeap::new();
+        let mut heap: DaryHeap<i32, 2> = DaryHeap::new();
         let mut vec = Vec::new();
 
-        // 随机插入10000个数字
-        for _ in 0..10000 {
+        (0..1000000).for_each(|_| {
             let num = rng.random_range(i32::MIN..i32::MAX);
             heap.push(num);
             vec.push(num);
-        }
+        });
 
-        // 验证堆的性质
         vec.sort_unstable_by(|a, b| b.cmp(a));
         vec.iter().for_each(|&num| {
             assert_eq!(heap.pop(), Some(num));

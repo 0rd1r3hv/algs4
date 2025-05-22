@@ -2,7 +2,6 @@ use crate::dary_heap::DaryHeap;
 use ordered_float::NotNan;
 use std::cmp::Reverse;
 use std::collections::BinaryHeap;
-
 type DistWrapper = NotNan<f64>;
 
 #[derive(Clone)]
@@ -27,6 +26,7 @@ pub struct Graph<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: b
 impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
     Graph<CALCPATH, HEURISTIC, EARLYSTOP>
 {
+    #[inline]
     pub fn new(size: usize, coord: &[(i32, i32)]) -> Self {
         println!(
             "HEURISTIC: {}, EARLYSTOP: {}, CALCPATH: {}",
@@ -46,6 +46,7 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
         }
     }
 
+    #[inline]
     pub fn add_edge(&mut self, from: usize, to: usize) {
         self.num_edges += 1;
         self.edges[from].push(Edge {
@@ -54,6 +55,7 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
         });
     }
 
+    #[inline]
     pub fn dijkstra(&mut self, start: usize, end: usize) -> f64 {
         if EARLYSTOP {
             while let Some(v) = self.changed.pop() {
@@ -72,7 +74,8 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
         }
 
         if HEURISTIC {
-            *self.get_dist_mut(start) = Self::euclidean_dist(self.get_coord(start), self.get_coord(end));
+            *self.get_dist_mut(start) =
+                Self::euclidean_dist(self.get_coord(start), self.get_coord(end));
         } else {
             *self.get_dist_mut(start) = 0.0;
         }
@@ -110,9 +113,10 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
                 let next_dist;
 
                 if HEURISTIC {
-                    next_dist =
-                        dist + weight + Self::euclidean_dist(self.get_coord(v), self.get_coord(end))
-                            - Self::euclidean_dist(self.get_coord(u), self.get_coord(end));
+                    next_dist = dist
+                        + weight
+                        + Self::euclidean_dist(self.get_coord(v), self.get_coord(end))
+                        - Self::euclidean_dist(self.get_coord(u), self.get_coord(end));
                 } else {
                     next_dist = dist + weight;
                 }
@@ -121,7 +125,8 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
                     unsafe {
                         *self.distances.get_unchecked_mut(v) = next_dist;
                     }
-                    self.heap.push((Reverse(DistWrapper::new(next_dist).unwrap()), v));
+                    self.heap
+                        .push((Reverse(DistWrapper::new(next_dist).unwrap()), v));
 
                     if CALCPATH {
                         unsafe {
@@ -165,84 +170,58 @@ impl<const CALCPATH: bool, const HEURISTIC: bool, const EARLYSTOP: bool>
         (path.len(), path.into_iter().rev())
     }
 
-
     #[inline]
     fn get_dist(&self, u: usize) -> &f64 {
-        unsafe {
-            self.distances.get_unchecked(u)
-        }
+        unsafe { self.distances.get_unchecked(u) }
     }
 
     #[inline]
     fn get_dist_mut(&mut self, u: usize) -> &mut f64 {
-        unsafe {
-            self.distances.get_unchecked_mut(u)
-        }
+        unsafe { self.distances.get_unchecked_mut(u) }
     }
 
     #[inline]
     fn get_visited(&self, u: usize) -> &bool {
-        unsafe {
-            self.visited.get_unchecked(u)
-        }
+        unsafe { self.visited.get_unchecked(u) }
     }
 
     #[inline]
     fn get_visited_mut(&mut self, u: usize) -> &mut bool {
-        unsafe {
-            self.visited.get_unchecked_mut(u)
-        }
+        unsafe { self.visited.get_unchecked_mut(u) }
     }
 
     #[inline]
     fn get_calced(&self, u: usize) -> &bool {
-        unsafe {
-            self.calced.get_unchecked(u)
-        }
+        unsafe { self.calced.get_unchecked(u) }
     }
 
     #[inline]
     fn get_calced_mut(&mut self, u: usize) -> &mut bool {
-        unsafe {
-            self.calced.get_unchecked_mut(u)
-        }
+        unsafe { self.calced.get_unchecked_mut(u) }
     }
 
     #[inline]
     fn get_coord(&self, u: usize) -> &(i32, i32) {
-        unsafe {
-            self.coord.get_unchecked(u)
-        }
+        unsafe { self.coord.get_unchecked(u) }
     }
 
     #[inline]
     fn get_coord_mut(&mut self, u: usize) -> &mut (i32, i32) {
-        unsafe {
-            self.coord.get_unchecked_mut(u)
-        }
+        unsafe { self.coord.get_unchecked_mut(u) }
     }
 
     #[inline]
     fn get_path_mut(&mut self, u: usize) -> &mut usize {
-        unsafe {
-            self.path.get_unchecked_mut(u)
-        }
+        unsafe { self.path.get_unchecked_mut(u) }
     }
-    
-    
 
     #[inline]
     fn get_edges(&self, u: usize) -> &Vec<Edge> {
-        unsafe {
-            self.edges.get_unchecked(u)
-        }
+        unsafe { self.edges.get_unchecked(u) }
     }
 
     #[inline]
     fn get_edge(&self, u: usize, v: usize) -> &Edge {
-        unsafe {
-            self.edges.get_unchecked(u).get_unchecked(v)
-        }
+        unsafe { self.edges.get_unchecked(u).get_unchecked(v) }
     }
-
 }

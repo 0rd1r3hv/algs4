@@ -50,6 +50,7 @@ pub struct AhoCorasick {
     trie: Vec<Node>,
     pattern_indices: Vec<u32>,
     stack: Vec<u32>,
+    num_distinct_patterns: usize,
 }
 
 #[derive(Clone)]
@@ -58,6 +59,7 @@ struct Node {
     children: Vec<u32>,
     fail: u32,
     ans: u32,
+    length: u32,
 }
 
 impl Node {
@@ -68,6 +70,7 @@ impl Node {
             children: Vec::new(),
             fail: 0,
             ans: 0,
+            length: 0,
         }
     }
 }
@@ -76,7 +79,7 @@ impl AhoCorasick {
     pub fn new(patterns: &[(String, u32)]) -> Self {
         let mut trie = vec![Node::new()];
         let mut len_trie = 0;
-
+        let mut num_distinct_patterns = 0;
         let mut pattern_indices = Vec::with_capacity(patterns.len());
 
         unsafe { pattern_indices.set_len(patterns.len()) };
@@ -93,6 +96,10 @@ impl AhoCorasick {
                     trie[current].children.push(len_trie as u32);
                     len_trie
                 };
+            }
+            if trie[current].length == 0 {
+                trie[current].length = pattern.len() as u32;
+                num_distinct_patterns += 1;
             }
             pattern_indices[*index as usize] = current as u32;
         }
@@ -165,6 +172,7 @@ impl AhoCorasick {
             trie,
             pattern_indices,
             stack,
+            num_distinct_patterns,
         }
     }
 
@@ -189,5 +197,34 @@ impl AhoCorasick {
         self.pattern_indices
             .iter()
             .map(|&i| self.trie[i as usize].ans)
+    }
+
+    pub fn get_first_matches(&mut self, text: &str) -> impl Iterator<Item = u32> {
+        let mut current = 0;
+        let mut matches = vec![0; self.trie.len()];
+        let mut num_matched = 0;
+
+        for (i, &b) in text.as_bytes().iter().enumerate() {
+            if num_matched == self.num_distinct_patterns {
+                break;
+            }
+            current = if let Some(index) = self.trie[current].map.get_index(b) {
+                self.trie[current].children[index] as usize
+            } else {
+                0
+            };
+            let mut temp = current;
+            while temp != 0 && matches[temp] == 0 {
+                if self.trie[temp].length > 0 {
+                    matches[temp] = i as u32 - self.trie[temp].length + 2;
+                    num_matched += 1;
+                }
+                temp = self.trie[temp].fail as usize;
+            }
+        }
+
+        self.pattern_indices
+            .iter()
+            .map(move |&i| matches[i as usize])
     }
 }

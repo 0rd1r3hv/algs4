@@ -117,6 +117,7 @@ fn main() {
         let mut total_dist = 0.0;
         let mut total_num_nodes = 0;
         let mut count = 0;
+        let mut valid_count = 0;
         let output_file = format!("output/exp_3/{}", test_file);
         let mut file = File::create(output_file).expect("Failed to create output file");
 
@@ -137,10 +138,15 @@ fn main() {
             let start_time = Instant::now();
             let dist = graph.dijkstra(start, end);
             total_time += start_time.elapsed();
-            total_dist += dist;
+            if dist != f64::INFINITY {
+                valid_count += 1;
+                total_dist += dist;
+            }
             if CALCPATH {
                 let (num_nodes, path) = graph.get_path(start, end);
-                total_num_nodes += num_nodes;
+                if dist != f64::INFINITY {
+                    total_num_nodes += num_nodes;
+                }
                 path.for_each(|node| {
                     file.write_all(format!("{} ", node).as_bytes())
                         .expect("Failed to write to file");
@@ -154,8 +160,8 @@ fn main() {
         println!("File: {}", test_file);
         println!("Total time: {:?}", total_time);
         println!("Average time: {:?}", total_time / count);
-        println!("Average num nodes: {}", total_num_nodes / count as usize);
-        println!("Average dist: {}", total_dist / count as f64);
+        println!("Average num nodes: {}", total_num_nodes / valid_count as usize);
+        println!("Average dist: {}", total_dist / valid_count as f64);
         println!();
     }
 
