@@ -1,0 +1,84 @@
+Bitmap:
+Sort time: 13.3µs, Build time: 243.9µs, Count time: 24.4036ms, Total time: 24.6608ms, Heap Usage: 197476
+--------------------------------
+Bitmap:
+Sort time: 13.3µs, Build time: 229.6µs, Count time: 826.741ms, Total time: 826.9839ms, Heap Usage: 197476
+--------------------------------
+Bitmap:
+Sort time: 13.3µs, Build time: 233.3µs, Count time: 4.926ms, Total time: 5.1726ms, Heap Usage: 197476
+--------------------------------
+Bitmap:
+Sort time: 13.3µs, Build time: 342.7µs, Count time: 13.0785ms, Total time: 13.4345ms, Heap Usage: 197476
+--------------------------------
+Bitmap:
+Sort time: 2.1813ms, Build time: 81.0796ms, Count time: 36.7024ms, Total time: 119.9633ms, Heap Usage: 57741920
+--------------------------------
+Bitmap:
+Sort time: 2.1813ms, Build time: 76.5366ms, Count time: 2.0218218s, Total time: 2.1005397s, Heap Usage: 57741920
+--------------------------------
+Bitmap:
+Sort time: 2.1813ms, Build time: 75.4684ms, Count time: 9.9794ms, Total time: 87.6291ms, Heap Usage: 57741920
+--------------------------------
+Bitmap:
+Sort time: 2.1813ms, Build time: 78.4097ms, Count time: 25.9518ms, Total time: 106.5428ms, Heap Usage: 57741920
+--------------------------------
+Bitmap:
+Sort time: 102.7µs, Build time: 7.4332ms, Count time: 28.9453ms, Total time: 36.4812ms, Heap Usage: 6690792
+--------------------------------
+Bitmap:
+Sort time: 102.7µs, Build time: 8.0922ms, Count time: 1.1082165s, Total time: 1.1164114s, Heap Usage: 6690792
+--------------------------------
+Bitmap:
+Sort time: 102.7µs, Build time: 11.0643ms, Count time: 5.9035ms, Total time: 17.0705ms, Heap Usage: 6690792
+--------------------------------
+Bitmap:
+Sort time: 102.7µs, Build time: 9.7053ms, Count time: 17.1706ms, Total time: 26.9786ms, Heap Usage: 6690792
+--------------------------------
+Bitmap:
+Sort time: 10.5637ms, Build time: 141.1448ms, Count time: 45.0188ms, Total time: 196.7273ms, Heap Usage: 105116508
+--------------------------------
+Bitmap:
+Sort time: 10.5637ms, Build time: 152.5518ms, Count time: 2.1965537s, Total time: 2.3596692s, Heap Usage: 105116508
+--------------------------------
+Bitmap:
+Sort time: 10.5637ms, Build time: 140.505ms, Count time: 12.8109ms, Total time: 163.8796ms, Heap Usage: 105116508
+--------------------------------
+Bitmap:
+Sort time: 10.5637ms, Build time: 134.2205ms, Count time: 30.6243ms, Total time: 175.4085ms, Heap Usage: 105116508
+--------------------------------
+Bitmap:
+Sort time: 3.3µs, Build time: 248.8µs, Count time: 24.0567ms, Total time: 24.3088ms, Heap Usage: 191220
+--------------------------------
+Bitmap:
+Sort time: 3.3µs, Build time: 259.6µs, Count time: 792.4684ms, Total time: 792.7313ms, Heap Usage: 191220
+--------------------------------
+Bitmap:
+Sort time: 3.3µs, Build time: 243µs, Count time: 4.555ms, Total time: 4.8013ms, Heap Usage: 191220
+--------------------------------
+Bitmap:
+Sort time: 3.3µs, Build time: 275.9µs, Count time: 12.7522ms, Total time: 13.0314ms, Heap Usage: 191220
+--------------------------------
+Bitmap:
+Sort time: 791.5µs, Build time: 31.8522ms, Count time: 32.7874ms, Total time: 65.4311ms, Heap Usage: 27049880
+--------------------------------
+Bitmap:
+Sort time: 791.5µs, Build time: 30.9045ms, Count time: 1.4103991s, Total time: 1.4420951s, Heap Usage: 27049880
+--------------------------------
+Bitmap:
+Sort time: 791.5µs, Build time: 32.9702ms, Count time: 7.3538ms, Total time: 41.1155ms, Heap Usage: 27049880
+--------------------------------
+Bitmap:
+Sort time: 791.5µs, Build time: 33.4094ms, Count time: 21.2818ms, Total time: 55.4827ms, Heap Usage: 27049880
+--------------------------------
+Bitmap:
+Sort time: 190.7µs, Build time: 11.8974ms, Count time: 30.1779ms, Total time: 42.266ms, Heap Usage: 9474956
+--------------------------------
+Bitmap:
+Sort time: 190.7µs, Build time: 11.4777ms, Count time: 1.190479s, Total time: 1.2021474s, Heap Usage: 9474956
+--------------------------------
+Bitmap:
+Sort time: 190.7µs, Build time: 13.2576ms, Count time: 6.4467ms, Total time: 19.895ms, Heap Usage: 9474956
+--------------------------------
+Bitmap:
+Sort time: 190.7µs, Build time: 15.2946ms, Count time: 18.8055ms, Total time: 34.2908ms, Heap Usage: 9474956
+--------------------------------

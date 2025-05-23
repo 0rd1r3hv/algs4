@@ -160,7 +160,10 @@ fn main() {
         println!("File: {}", test_file);
         println!("Total time: {:?}", total_time);
         println!("Average time: {:?}", total_time / count);
-        println!("Average num nodes: {}", total_num_nodes / valid_count as usize);
+        println!(
+            "Average num nodes: {}",
+            total_num_nodes / valid_count as usize
+        );
         println!("Average dist: {}", total_dist / valid_count as f64);
         println!();
     }

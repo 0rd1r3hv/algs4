@@ -215,8 +215,8 @@ impl AhoCorasick {
             };
             let mut temp = current;
             while temp != 0 && matches[temp] == 0 {
+                matches[temp] = i as u32 - self.trie[temp].length + 2;
                 if self.trie[temp].length > 0 {
-                    matches[temp] = i as u32 - self.trie[temp].length + 2;
                     num_matched += 1;
                 }
                 temp = self.trie[temp].fail as usize;

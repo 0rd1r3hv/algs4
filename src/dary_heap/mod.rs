@@ -121,7 +121,6 @@ impl<T: Ord, const D: usize> DaryHeap<T, D> {
                         );
                     }
                     parent = child;
-
                 }
 
                 while parent > 0 {

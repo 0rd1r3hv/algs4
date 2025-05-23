@@ -1,9 +1,9 @@
 use algs4::dary_heap::DaryHeap;
+use clap::{Arg, Command};
 use ordered_float::NotNan;
 use rand::{distr::StandardUniform, prelude::Distribution, random};
 use std::collections::BinaryHeap;
 use std::time::Instant;
-use clap::{Arg, Command};
 
 fn generate_random_array<T>(size: usize) -> Vec<T>
 where
@@ -25,7 +25,7 @@ fn main() {
                 .short('s')
                 .long("size")
                 .value_parser(clap::value_parser!(usize))
-                .default_value("5000")
+                .default_value("5000"),
         )
         .get_matches();
 
@@ -62,7 +62,7 @@ fn main() {
     // (0..size).for_each(|_| {dary_heap.pop();});
     // let duration = start.elapsed();
     // println!("My {}-aryHeap pop time: {:?}", D, duration);
-        
+
     let arr = generate_random_array::<TestType>(size);
     let start = Instant::now();
     arr.iter()
@@ -83,7 +83,6 @@ fn main() {
         .for_each(|&x| dary_heap_crate.push(NotNan::new(x).unwrap()));
     let duration = start.elapsed();
     println!("Crate {}-aryHeap push time: {:?}", D, duration);
-
 
     if TEST_POP {
         let start = Instant::now();
